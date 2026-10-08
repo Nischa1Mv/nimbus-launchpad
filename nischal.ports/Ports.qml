@@ -580,7 +580,7 @@ Item {
             Text {
               anchors.centerIn: parent
               visible: personalModel.count === 0
-              text: "Add a .devports file to a project in /mnt/Work/work/Projects to list it here"
+              text: "Set PERSONAL_DIR in ~/.config/nimbus-dev/config and add a .devports file to a project in it to list it here"
               color: root.foreground
               opacity: 0.5
               font.family: root.fontFamily

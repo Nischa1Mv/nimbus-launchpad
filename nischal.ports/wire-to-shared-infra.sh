@@ -2,7 +2,7 @@
 # Converts a Nimbus project's OWN isolated dev stack (own db/minio/mailpit/
 # cognito-local containers on non-default host ports, built for macOS/Windows/
 # Linux portability) onto the shared-infra stack in
-# /mnt/Work/work/Nimbus/shared-infra instead.
+# shared-infra (this repo's shared-infra/ folder) instead.
 #
 # What it does:
 #   1. Backs up .devcontainer/docker-compose.yml and .env(.example)

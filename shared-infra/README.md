@@ -72,8 +72,8 @@ The popup's Ports tab also shows a **Stop** button on any row owned by a contain
 
 ```
 # any project, either stack
-shared-infra/run-project.sh /mnt/Work/work/Nimbus/nimbus-apps-template-v2 all
-shared-infra/run-project.sh /mnt/Work/work/Nimbus/mosambi all
+shared-infra/run-project.sh $NIMBUS_DIR/nimbus-apps-template-v2 all
+shared-infra/run-project.sh $NIMBUS_DIR/mosambi all
 
 # only one half
 shared-infra/run-project.sh <project-dir> backend      # stays in the foreground
@@ -201,5 +201,5 @@ Keep both branches in `run-project.sh` until every project is on one release lin
 
 Related, outside this folder:
 
-- `/mnt/Work/Omarchy-Customapp/nischal.ports/` is the Ctrl+P popup plugin. It lists ports, starts and stops projects, and calls `run-project.sh`.
-- `nischal.ports/wire-to-shared-infra.sh <project-dir>` converts a project that still has its own db/minio containers onto this stack.
+- `../nischal.ports/` is the Ctrl+P popup plugin (Omarchy only). It lists ports, starts and stops projects, and calls `run-project.sh`.
+- `../nischal.ports/wire-to-shared-infra.sh <project-dir>` converts a project that still has its own db/minio containers onto this stack.

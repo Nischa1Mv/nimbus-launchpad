@@ -23,9 +23,17 @@
 
 set -euo pipefail
 
-NIMBUS_DIR="/mnt/Work/work/Nimbus"
-SHARED_INFRA="$NIMBUS_DIR/shared-infra"
-PERSONAL_DIR="/mnt/Work/work/Projects"
+# Where the Nimbus projects live is user config (written by install.sh), not hardcoded.
+REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+CONFIG="${NIMBUS_DEV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nimbus-dev/config}"
+[ -f "$CONFIG" ] && . "$CONFIG"
+NIMBUS_DIR="${NIMBUS_DIR:-}"
+PERSONAL_DIR="${PERSONAL_DIR:-}"
+if [ -z "$NIMBUS_DIR" ] || [ ! -d "$NIMBUS_DIR" ]; then
+  echo "NIMBUS_DIR not set or missing (config: $CONFIG). Run $REPO_DIR/install.sh" >&2
+  exit 1
+fi
+SHARED_INFRA="$REPO_DIR/shared-infra"
 LOG_DIR="$HOME/.local/state/nischal-ports/logs"
 
 # <service> <field> from a project's .devports (field 2 = port, 3 = make target)
@@ -130,7 +138,7 @@ case "${1:-}" in
   --personal-json)
     printf '['
     first=1
-    for dir in "$PERSONAL_DIR"/*/; do
+    for dir in ${PERSONAL_DIR:+"$PERSONAL_DIR"/*/}; do
       [ -f "$dir/.devports" ] || continue
       path=$(readlink -f "$dir")
       row=$(jq -nc --arg name "$(basename "$dir")" --arg path "$path" '{name:$name, path:$path, kind:"personal"}')
