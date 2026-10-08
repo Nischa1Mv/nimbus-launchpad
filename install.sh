@@ -1,45 +1,55 @@
 #!/usr/bin/env bash
-# Point this tool at your Nimbus projects folder and install the Ctrl+P popup.
+# nimbus-launchpad installer: saves your config, then hands off to the adapter for your platform.
 #
-#   ./install.sh [nimbus-projects-dir] [personal-projects-dir]
+#   ./install.sh [nimbus-dir] [personal-dir] [--yes] [--no-bind] [--platform <id>]
 #
-# Writes ~/.config/nimbus-launchpad/config (NIMBUS_DIR, optional PERSONAL_DIR). Re-run any time to change it.
-# The popup part is Omarchy-only; shared-infra/run-project.sh works on any Linux without it.
+# 1. Config (core, same on every OS): NIMBUS_DIR / PERSONAL_DIR -> ~/.config/nimbus-launchpad/config
+# 2. Platform adapter (platforms/<id>/): wires up the UI + shortcut for your desktop.
+#    The first adapter whose detect.sh succeeds runs; `generic` is the fallback (CLI only).
+#
+# Adding a platform: see platforms/README.md.
 set -euo pipefail
 
-REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+export REPO
+
+YES=0 NO_BIND=0 PLATFORM="" dirs=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --yes|-y) YES=1 ;;
+    --no-bind) NO_BIND=1 ;;
+    --platform) PLATFORM="${2:?--platform needs an id}"; shift ;;
+    -*) echo "unknown option: $1" >&2; exit 1 ;;
+    *) dirs+=("$1") ;;
+  esac
+  shift
+done
+export YES NO_BIND
+
+# --- 1. config ------------------------------------------------------------------------------
 CONFIG="${NIMBUS_DEV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nimbus-launchpad/config}"
 [ -f "$CONFIG" ] && . "$CONFIG"
-
-nimbus="${1:-}"
-if [ -z "$nimbus" ]; then
+nimbus="${dirs[0]:-${NIMBUS_DIR:-}}"; personal="${dirs[1]:-${PERSONAL_DIR:-}}"
+if [ -z "$nimbus" ] && [ -t 0 ] && [ "$YES" = 0 ]; then
   read -r -e -i "${NIMBUS_DIR:-}" -p "Folder that contains your Nimbus projects (e.g. ~/work/Nimbus): " nimbus
-fi
-nimbus="$(cd "${nimbus/#\~/$HOME}" 2>/dev/null && pwd)" || { echo "error: not a folder" >&2; exit 1; }
-
-personal="${2:-}"
-if [ -z "$personal" ] && [ -t 0 ]; then
   read -r -e -i "${PERSONAL_DIR:-}" -p "Folder with personal projects (.devports files), empty to skip: " personal
 fi
-[ -z "$personal" ] || personal="$(cd "${personal/#\~/$HOME}" 2>/dev/null && pwd)" || { echo "error: not a folder" >&2; exit 1; }
-
-mkdir -p "$(dirname "$CONFIG")"
-printf 'NIMBUS_DIR=%q\nPERSONAL_DIR=%q\n' "$nimbus" "$personal" >"$CONFIG"
-echo "wrote $CONFIG"
-
-# Optional: Omarchy popup plugin
-plugins="$HOME/.config/omarchy/plugins"
-if [ -d "$HOME/.config/omarchy" ]; then
-  mkdir -p "$plugins"
-  ln -sfn "$REPO/nimbus.launchpad" "$plugins/nimbus.launchpad"
-  echo "linked $plugins/nimbus.launchpad"
-  shell_json="$HOME/.config/omarchy/shell.json"
-  if [ -f "$shell_json" ] && command -v jq >/dev/null && ! jq -e '.plugins[]? | select(.id=="nimbus.launchpad")' "$shell_json" >/dev/null; then
-    jq '.plugins = ((.plugins // []) + [{"id":"nimbus.launchpad"}])' "$shell_json" >"$shell_json.tmp" && mv "$shell_json.tmp" "$shell_json"
-    echo "enabled nimbus.launchpad in $shell_json"
-  fi
-  echo "Add this to ~/.config/hypr/bindings.lua, then restart the shell (omarchy-restart-app quickshell):"
-  echo '  o.bind("CTRL + P", "Ports", "omarchy-shell shell toggle nimbus.launchpad")'
+if [ -n "$nimbus" ]; then
+  "$REPO/list-ports.sh" --save-config "$nimbus" "$personal"
 else
-  echo "Omarchy not found: skipped the popup. Use: $REPO/shared-infra/run-project.sh <project-dir>"
+  echo "No projects folder given: skipped. Set it later in the popup's setup panel or re-run ./install.sh <dir>."
 fi
+
+# --- 2. platform adapter ------------------------------------------------------------------
+chosen="$PLATFORM"
+if [ -z "$chosen" ]; then
+  for d in "$REPO"/platforms/*/; do
+    id="$(basename "$d")"
+    [ "$id" = generic ] && continue
+    if [ -f "$d/detect.sh" ] && bash "$d/detect.sh" >/dev/null 2>&1; then chosen="$id"; break; fi
+  done
+fi
+chosen="${chosen:-generic}"
+[ -f "$REPO/platforms/$chosen/install.sh" ] || { echo "no such platform adapter: $chosen" >&2; exit 1; }
+echo "==> platform: $chosen"
+exec bash "$REPO/platforms/$chosen/install.sh"

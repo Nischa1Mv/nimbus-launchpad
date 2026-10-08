@@ -8,6 +8,8 @@
 #                start-frontend-dev targets.
 # --stop <container|shared-infra>  stops a docker container (or the whole
 #                nimbus-shared stack) that owns a port; volumes/data are kept.
+# --setup-status  prints {configured, nimbusDir, personalDir, missing:[tools]} (popup first-run panel).
+# --save-config <nimbus-dir> [personal-dir]  validates + writes the user config.
 # --infra-status prints whether the shared-infra docker stack is up.
 # --start-backend <project-dir>   delegates to shared-infra/run-project.sh
 #                (infra up -> per-project DB -> binaries via `make build-backend`
@@ -24,17 +26,43 @@
 set -euo pipefail
 
 # Where the Nimbus projects live is user config (written by install.sh), not hardcoded.
-REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
+REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 CONFIG="${NIMBUS_DEV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nimbus-launchpad/config}"
 [ -f "$CONFIG" ] && . "$CONFIG"
 NIMBUS_DIR="${NIMBUS_DIR:-}"
 PERSONAL_DIR="${PERSONAL_DIR:-}"
-if [ -z "$NIMBUS_DIR" ] || [ ! -d "$NIMBUS_DIR" ]; then
-  echo "NIMBUS_DIR not set or missing (config: $CONFIG). Run $REPO_DIR/install.sh" >&2
-  exit 1
-fi
+CONFIGURED=false
+[ -n "$NIMBUS_DIR" ] && [ -d "$NIMBUS_DIR" ] && CONFIGURED=true
 SHARED_INFRA="$REPO_DIR/shared-infra"
 LOG_DIR="$HOME/.local/state/nimbus-launchpad/logs"
+
+# First-run setup (used by the popup's setup panel and install.sh). Handled early:
+# they must work before anything is configured.
+case "${1:-}" in
+  --setup-status)
+    missing=()
+    for tool in docker gh psql atlas jq lsof npm; do command -v "$tool" >/dev/null 2>&1 || missing+=("$tool"); done
+    command -v gh >/dev/null 2>&1 && { gh auth token >/dev/null 2>&1 || missing+=("gh-login"); }
+    jq -nc --argjson configured "$CONFIGURED" --arg nimbus "$NIMBUS_DIR" --arg personal "$PERSONAL_DIR" \
+      '$ARGS.positional as $m | {configured:$configured, nimbusDir:$nimbus, personalDir:$personal, missing:$m}' \
+      --args "${missing[@]}"
+    exit 0
+    ;;
+  --save-config)
+    nimbus="${2:-}"; personal="${3:-}"
+    nimbus="${nimbus/#\~/$HOME}"; personal="${personal/#\~/$HOME}"
+    [ -n "$nimbus" ] && [ -d "$nimbus" ] || { echo "not a folder: ${nimbus:-<empty>}" >&2; exit 1; }
+    nimbus="$(cd "$nimbus" && pwd)"
+    if [ -n "$personal" ]; then
+      [ -d "$personal" ] || { echo "not a folder: $personal" >&2; exit 1; }
+      personal="$(cd "$personal" && pwd)"
+    fi
+    mkdir -p "$(dirname "$CONFIG")"
+    printf 'NIMBUS_DIR=%q\nPERSONAL_DIR=%q\n' "$nimbus" "$personal" >"$CONFIG"
+    echo "wrote $CONFIG"
+    exit 0
+    ;;
+esac
 
 # <service> <field> from a project's .devports (field 2 = port, 3 = make target)
 devport() { awk -v s="$2" -v f="$3" '$1 == s { print $f; exit }' "$1/.devports"; }
@@ -97,6 +125,7 @@ case "${1:-}" in
     '
     ;;
   --nimbus-json)
+    $CONFIGURED || { echo '[]'; exit 0; }
     backend_pid=$(ss -ltnp 2>/dev/null | awk '$4 ~ /:8080$/' | grep -oP 'pid=\K[0-9]+' | head -1 || true)
     frontend_pid=$(ss -ltnp 2>/dev/null | awk '$4 ~ /:3000$/' | grep -oP 'pid=\K[0-9]+' | head -1 || true)
     backend_cwd=""; frontend_cwd=""

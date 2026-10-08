@@ -21,6 +21,9 @@ Item {
   property int cardWidth: Math.min(Style.space(840), panel.width - Style.gapsOut * 2)
   property int cardHeight: Math.min(Style.space(480), panel.height - Style.gapsOut * 2)
   property int rowHeight: Math.max(Style.space(40), Style.font.body + Style.spacing.rowPaddingX * 2)
+  // first-run state from list-ports.sh --setup-status (default "configured" so the panel does not flash)
+  property var setup: ({ configured: true, missing: [] })
+  property string setupError: ""
   property var startingBackend: ({})
   property var startingFrontend: ({})
 
@@ -49,6 +52,13 @@ Item {
     if (!listProc.running) listProc.running = true
     if (!nimbusProc.running) nimbusProc.running = true
     if (!personalProc.running) personalProc.running = true
+    if (!setupProc.running) setupProc.running = true
+  }
+
+  function saveSetup(nimbusDir, personalDir) {
+    root.setupError = ""
+    saveProc.command = [root.scriptPath, "--save-config", nimbusDir, personalDir]
+    saveProc.running = true
   }
 
   readonly property var tabs: ["ports", "nimbus", "personal"]
@@ -169,6 +179,26 @@ Item {
       waitForEnd: true
       onStreamFinished: root.loadProjects(personalModel, text)
     }
+  }
+
+  Process {
+    id: setupProc
+    command: [root.scriptPath, "--setup-status"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        try { root.setup = JSON.parse(text) } catch (e) { /* ignore malformed output */ }
+      }
+    }
+  }
+
+  Process {
+    id: saveProc
+    stderr: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.setupError = text.trim()
+    }
+    onExited: root.refresh()
   }
 
   Timer {
@@ -556,10 +586,121 @@ Item {
                 width: parent.width
                 height: parent.height
                 clip: true
+                visible: root.setup.configured
                 model: nimbusModel
                 spacing: Style.space(2)
 
                 delegate: projectRow
+              }
+            }
+
+            // first run: no projects folder configured yet
+            Column {
+              anchors.centerIn: parent
+              width: Math.min(parent.width, Style.space(520))
+              spacing: Style.spacing.md
+              visible: !root.setup.configured
+
+              Text {
+                text: "Set up Nimbus Launchpad"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.body
+              }
+
+              Text {
+                width: parent.width
+                text: "Which folder contains your Nimbus projects?"
+                color: root.foreground
+                opacity: 0.7
+                wrapMode: Text.WordWrap
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Rectangle {
+                width: parent.width
+                height: root.rowHeight * 0.9
+                radius: root.cornerRadius
+                color: "transparent"
+                border.width: 1
+                border.color: nimbusField.activeFocus ? root.foreground : Qt.rgba(1, 1, 1, 0.25)
+
+                TextInput {
+                  id: nimbusField
+                  anchors.fill: parent
+                  anchors.margins: Style.space(6)
+                  verticalAlignment: TextInput.AlignVCenter
+                  color: root.foreground
+                  clip: true
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                  Text {
+                    visible: nimbusField.text.length === 0
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "~/work/Nimbus"
+                    color: root.foreground
+                    opacity: 0.35
+                    font: nimbusField.font
+                  }
+                }
+              }
+
+              Text {
+                width: parent.width
+                text: "Personal projects folder (optional, projects with a .devports file)"
+                color: root.foreground
+                opacity: 0.7
+                wrapMode: Text.WordWrap
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Rectangle {
+                width: parent.width
+                height: root.rowHeight * 0.9
+                radius: root.cornerRadius
+                color: "transparent"
+                border.width: 1
+                border.color: personalField.activeFocus ? root.foreground : Qt.rgba(1, 1, 1, 0.25)
+
+                TextInput {
+                  id: personalField
+                  anchors.fill: parent
+                  anchors.margins: Style.space(6)
+                  verticalAlignment: TextInput.AlignVCenter
+                  color: root.foreground
+                  clip: true
+                  font.family: root.fontFamily
+                  font.pixelSize: Style.font.body
+                }
+              }
+
+              ServiceButton {
+                label: "Save"
+                color1: "#1e8449"
+                color2: "#27ae60"
+                onClicked: root.saveSetup(nimbusField.text.trim(), personalField.text.trim())
+              }
+
+              Text {
+                width: parent.width
+                visible: root.setupError !== ""
+                text: root.setupError
+                color: "#e74c3c"
+                wrapMode: Text.WordWrap
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              Text {
+                width: parent.width
+                visible: root.setup.missing && root.setup.missing.length > 0
+                text: "Missing tools: " + (root.setup.missing || []).join(", ") + " (gh-login = run `gh auth login`)"
+                color: "#f1c40f"
+                wrapMode: Text.WordWrap
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
               }
             }
           }
