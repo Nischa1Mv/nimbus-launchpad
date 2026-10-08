@@ -1,0 +1,113 @@
+# One shared dev-infra stack for ALL Nimbus devcontainer projects (postgres, minio, mailpit,
+# cognito-local). Every project already uses network_mode: host on the SAME fixed ports
+# (5432/9000/9001/8025/1025/9229), so only one project is ever active at a time anyway — no
+# reason to run a separate copy of these per project.
+#
+# Start once, leave running, work in any project:
+#   docker compose -p nimbus-shared -f shared-infra/docker-compose.yml up -d
+# A project's own devcontainer.json initializeCommand does this automatically (see
+# nimbus-shared-infra skill / per-project docker-compose.yml comment).
+#
+# All projects currently use the same non-secret dev defaults (POSTGRES_DB=postgres,
+# ARTIFACT_DATA_BUCKET=nimbus-dev-artifacts) so data is shared as-is. If two onboarded projects
+# ever need to coexist without clobbering each other's rows, give them distinct POSTGRES_DB /
+# ARTIFACT_DATA_BUCKET values in their own .env — the shared server/bucket-store supports many
+# logical DBs/buckets.
+
+volumes:
+  nimbus_shared_postgres_data:
+  nimbus_shared_minio_data:
+  nimbus_shared_mailpit_data:
+  nimbus_shared_cognito_data:
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - nimbus_shared_postgres_data:/var/lib/postgresql/data
+    network_mode: host
+
+  minio:
+    image: pgsty/minio:RELEASE.2026-04-17T00-00-00Z
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    command: server /data/s3 --console-address ":9001"
+    volumes:
+      - nimbus_shared_minio_data:/data/s3
+    network_mode: host
+
+  # One-shot: create the dev artifact bucket on a fresh MinIO volume (idempotent).
+  minio-init:
+    image: pgsty/mc:RELEASE.2026-09-13T00-00-00Z
+    network_mode: host
+    depends_on:
+      minio:
+        condition: service_started
+    env_file:
+      - .env
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        mc alias set local http://localhost:9000 "$${MINIO_ROOT_USER:-minio}" "$${MINIO_ROOT_PASSWORD:-minio123}"
+        mc mb --ignore-existing "local/$${ARTIFACT_DATA_BUCKET:-nimbus-dev-artifacts}"
+        cat > /tmp/cors.json <<'CORS'
+        {
+          "CORSRules": [
+            {
+              "AllowedOrigins": ["*"],
+              "AllowedMethods": ["GET", "PUT", "POST", "HEAD", "DELETE"],
+              "AllowedHeaders": ["*"],
+              "ExposeHeaders": ["ETag", "x-amz-request-id"],
+              "MaxAgeSeconds": 3600
+            }
+          ]
+        }
+        CORS
+        mc cors set /tmp/cors.json "local/$${ARTIFACT_DATA_BUCKET:-nimbus-dev-artifacts}" || true
+
+  mailpit:
+    image: axllent/mailpit:v1.30.1
+    restart: unless-stopped
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "5000"
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - nimbus_shared_mailpit_data:/data
+    network_mode: host
+
+  cognito-init:
+    image: busybox:1.37
+    volumes:
+      - nimbus_shared_cognito_data:/seed
+      - ./cognito-seed/db:/fixtures:ro
+    command:
+      - sh
+      - -c
+      - |
+        printf '%s' '{"TokenConfig":{"IssuerDomain":"http://localhost:9229"}}' > /seed/config.json
+        echo "wrote cognito-local config.json (IssuerDomain=http://localhost:9229)"
+        mkdir -p /seed/db
+        if [ ! -f /seed/db/local_nimbus01.json ]; then
+          cp /fixtures/*.json /seed/db/
+          echo "seeded cognito-local db fixtures from cognito-seed/"
+        else
+          echo "cognito-local db fixtures already present — leaving volume as-is"
+        fi
+
+  cognito-local:
+    image: jagregory/cognito-local:5.3.0
+    restart: unless-stopped
+    depends_on:
+      cognito-init:
+        condition: service_completed_successfully
+    volumes:
+      - nimbus_shared_cognito_data:/app/.cognito
+    network_mode: host

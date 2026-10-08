@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "id": "nischal.ports",
+  "name": "Ports",
+  "version": "1.0.0",
+  "author": "nischal",
+  "description": "Lists listening TCP ports with process, pid, and project dir; kill from the popup",
+  "kinds": ["overlay"],
+  "entryPoints": {
+    "overlay": "Ports.qml"
+  }
+}

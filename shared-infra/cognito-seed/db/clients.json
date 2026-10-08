@@ -1,0 +1,22 @@
+{
+  "Clients": {
+    "nimbuslocalclient000001": {
+      "ClientId": "nimbuslocalclient000001",
+      "ClientName": "nimbus-dev-client",
+      "UserPoolId": "local_nimbus01",
+      "CreationDate": "2024-01-01T00:00:00.000Z",
+      "LastModifiedDate": "2024-01-01T00:00:00.000Z",
+      "RefreshTokenValidity": 30,
+      "AllowedOAuthFlowsUserPoolClient": false,
+      "ExplicitAuthFlows": [
+        "ALLOW_USER_PASSWORD_AUTH",
+        "ALLOW_REFRESH_TOKEN_AUTH"
+      ],
+      "TokenValidityUnits": {
+        "AccessToken": "hours",
+        "IdToken": "minutes",
+        "RefreshToken": "days"
+      }
+    }
+  }
+}
