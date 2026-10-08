@@ -34,7 +34,7 @@ if [ -z "$NIMBUS_DIR" ] || [ ! -d "$NIMBUS_DIR" ]; then
   exit 1
 fi
 SHARED_INFRA="$REPO_DIR/shared-infra"
-LOG_DIR="$HOME/.local/state/nischal-ports/logs"
+LOG_DIR="$HOME/.local/state/nimbus-ports/logs"
 
 # <service> <field> from a project's .devports (field 2 = port, 3 = make target)
 devport() { awk -v s="$2" -v f="$3" '$1 == s { print $f; exit }' "$1/.devports"; }

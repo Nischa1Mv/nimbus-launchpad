@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "nischal.ports",
+  "id": "nimbus.ports",
   "name": "Ports",
   "version": "1.0.0",
-  "author": "nischal",
+  "author": "nimbus-dev-tools",
   "description": "Lists listening TCP ports with process, pid, and project dir; kill from the popup",
   "kinds": ["overlay"],
   "entryPoints": {

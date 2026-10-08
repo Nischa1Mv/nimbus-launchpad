@@ -31,10 +31,15 @@ echo "wrote $CONFIG"
 plugins="$HOME/.config/omarchy/plugins"
 if [ -d "$HOME/.config/omarchy" ]; then
   mkdir -p "$plugins"
-  ln -sfn "$REPO/nischal.ports" "$plugins/nischal.ports"
-  echo "linked $plugins/nischal.ports"
+  ln -sfn "$REPO/nimbus.ports" "$plugins/nimbus.ports"
+  echo "linked $plugins/nimbus.ports"
+  shell_json="$HOME/.config/omarchy/shell.json"
+  if [ -f "$shell_json" ] && command -v jq >/dev/null && ! jq -e '.plugins[]? | select(.id=="nimbus.ports")' "$shell_json" >/dev/null; then
+    jq '.plugins = ((.plugins // []) + [{"id":"nimbus.ports"}])' "$shell_json" >"$shell_json.tmp" && mv "$shell_json.tmp" "$shell_json"
+    echo "enabled nimbus.ports in $shell_json"
+  fi
   echo "Add this to ~/.config/hypr/bindings.lua, then restart the shell (omarchy-restart-app quickshell):"
-  echo '  o.bind("CTRL + P", "Ports", "omarchy-shell shell toggle nischal.ports")'
+  echo '  o.bind("CTRL + P", "Ports", "omarchy-shell shell toggle nimbus.ports")'
 else
   echo "Omarchy not found: skipped the popup. Use: $REPO/shared-infra/run-project.sh <project-dir>"
 fi

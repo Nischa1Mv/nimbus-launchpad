@@ -1,14 +1,14 @@
-# Omarchy-Customapp
+# nimbus-dev-tools
 
 Local dev tooling for Nimbus and Nimbus+Meredian projects. Two parts in one repo:
 
 - `shared-infra/`: one shared Docker stack (postgres, minio, mailpit, cognito-local) plus `run-project.sh`, which sets up and starts any Nimbus project against it. Plain bash; works on any Linux. See `shared-infra/README.md`.
-- `nischal.ports/`: Ctrl+P popup (Omarchy shell plugin) that lists listening ports, stops containers, and starts/stops project backends and frontends through `run-project.sh`. Omarchy only (Quickshell + Hyprland).
+- `nimbus.ports/`: Ctrl+P popup (Omarchy shell plugin) that lists listening ports, stops containers, and starts/stops project backends and frontends through `run-project.sh`. Omarchy only (Quickshell + Hyprland).
 
 ## Setup
 
 ```
-git clone https://github.com/Nischa1Mv/Omarchy-Customapp && cd Omarchy-Customapp
+git clone https://github.com/Nischa1Mv/nimbus-dev-tools && cd nimbus-dev-tools
 ./install.sh                      # asks for the folder that contains your Nimbus projects
 ./install.sh ~/work/Nimbus        # or pass it directly (second arg: optional personal projects folder)
 ```
