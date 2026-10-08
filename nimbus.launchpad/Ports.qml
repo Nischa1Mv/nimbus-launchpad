@@ -10,7 +10,7 @@ Item {
 
   property bool opened: false
   property string currentTab: "ports"
-  property string scriptPath: Quickshell.env("HOME") + "/.config/omarchy/plugins/nimbus.ports/list-ports.sh"
+  property string scriptPath: Quickshell.env("HOME") + "/.config/omarchy/plugins/nimbus.launchpad/list-ports.sh"
   property color background: Color.menu.background
   property color foreground: Color.menu.text
   property color border: Color.menu.border
@@ -88,7 +88,7 @@ Item {
   }
 
   // starts run in the background; output goes to a log file the Log button tails
-  property string logDir: Quickshell.env("HOME") + "/.local/state/nimbus-ports/logs"
+  property string logDir: Quickshell.env("HOME") + "/.local/state/nimbus-launchpad/logs"
 
   function openLog(path, service) {
     var log = root.logDir + "/" + path.split("/").pop() + "-" + service + ".log"
@@ -354,7 +354,7 @@ Item {
     visible: root.opened
     anchors { top: true; bottom: true; left: true; right: true }
     color: "transparent"
-    WlrLayershell.namespace: "nimbus-ports"
+    WlrLayershell.namespace: "nimbus-launchpad"
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
     exclusionMode: ExclusionMode.Ignore
@@ -580,7 +580,7 @@ Item {
             Text {
               anchors.centerIn: parent
               visible: personalModel.count === 0
-              text: "Set PERSONAL_DIR in ~/.config/nimbus-dev/config and add a .devports file to a project in it to list it here"
+              text: "Set PERSONAL_DIR in ~/.config/nimbus-launchpad/config and add a .devports file to a project in it to list it here"
               color: root.foreground
               opacity: 0.5
               font.family: root.fontFamily

@@ -6,7 +6,7 @@ One Docker stack runs the infra for **every** Nimbus and Nimbus+Meredian project
 shared-infra/run-project.sh <project-dir> [backend|frontend|all]
 ```
 
-Same thing from the Ctrl+P ports popup (plugin `nimbus.ports`): its Backend / Frontend **Start** buttons call this script.
+Same thing from the Ctrl+P ports popup (plugin `nimbus.launchpad`): its Backend / Frontend **Start** buttons call this script.
 
 ## Contents
 
@@ -201,5 +201,5 @@ Keep both branches in `run-project.sh` until every project is on one release lin
 
 Related, outside this folder:
 
-- `../nimbus.ports/` is the Ctrl+P popup plugin (Omarchy only). It lists ports, starts and stops projects, and calls `run-project.sh`.
-- `../nimbus.ports/wire-to-shared-infra.sh <project-dir>` converts a project that still has its own db/minio containers onto this stack.
+- `../nimbus.launchpad/` is the Ctrl+P popup plugin (Omarchy only). It lists ports, starts and stops projects, and calls `run-project.sh`.
+- `../nimbus.launchpad/wire-to-shared-infra.sh <project-dir>` converts a project that still has its own db/minio containers onto this stack.

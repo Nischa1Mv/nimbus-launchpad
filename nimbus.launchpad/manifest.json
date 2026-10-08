@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "nimbus.ports",
-  "name": "Ports",
+  "id": "nimbus.launchpad",
+  "name": "Nimbus Launchpad",
   "version": "1.0.0",
-  "author": "nimbus-dev-tools",
+  "author": "nimbus-launchpad",
   "description": "Lists listening TCP ports with process, pid, and project dir; kill from the popup",
   "kinds": ["overlay"],
   "entryPoints": {

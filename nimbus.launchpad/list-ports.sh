@@ -25,7 +25,7 @@ set -euo pipefail
 
 # Where the Nimbus projects live is user config (written by install.sh), not hardcoded.
 REPO_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
-CONFIG="${NIMBUS_DEV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nimbus-dev/config}"
+CONFIG="${NIMBUS_DEV_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/nimbus-launchpad/config}"
 [ -f "$CONFIG" ] && . "$CONFIG"
 NIMBUS_DIR="${NIMBUS_DIR:-}"
 PERSONAL_DIR="${PERSONAL_DIR:-}"
@@ -34,7 +34,7 @@ if [ -z "$NIMBUS_DIR" ] || [ ! -d "$NIMBUS_DIR" ]; then
   exit 1
 fi
 SHARED_INFRA="$REPO_DIR/shared-infra"
-LOG_DIR="$HOME/.local/state/nimbus-ports/logs"
+LOG_DIR="$HOME/.local/state/nimbus-launchpad/logs"
 
 # <service> <field> from a project's .devports (field 2 = port, 3 = make target)
 devport() { awk -v s="$2" -v f="$3" '$1 == s { print $f; exit }' "$1/.devports"; }
